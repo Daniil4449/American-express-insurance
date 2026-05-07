@@ -589,39 +589,33 @@ let sigHasData = false;
 
 function selectLevel(level) {
   if (level === 'rnd') {
-    // RUN AND DRIVE — незалежний перемикач
+    // RUN AND DRIVE — завжди незалежний, не взаємодіє з жодним іншим рівнем
     rndSelected = !rndSelected;
     document.getElementById('card-rnd').classList.toggle('selected', rndSelected);
     document.getElementById('chk-rnd').textContent = rndSelected ? '✓' : '';
-    // Якщо було обрано "Без страхування" — знімаємо його
-    if (rndSelected && selectedMainLevel === 'none') {
-      selectedMainLevel = null;
-      document.getElementById('card-none').classList.remove('selected');
-      document.getElementById('chk-none').textContent = '';
-    }
   } else if (level === 'none') {
-    // "Без страхування" — знімає ВСЕ, включно з RUN AND DRIVE
+    // "Без страхування" — знімає min/std/prem, але НЕ чіпає RUN AND DRIVE
     const wasNone = selectedMainLevel === 'none';
-    ['min', 'std', 'prem', 'rnd', 'none'].forEach(l => {
+    ['min', 'std', 'prem', 'none'].forEach(l => {
       document.getElementById('card-' + l).classList.remove('selected');
       document.getElementById('chk-' + l).textContent = '';
     });
     selectedMainLevel = null;
-    rndSelected = false;
     if (!wasNone) {
       selectedMainLevel = 'none';
       document.getElementById('card-none').classList.add('selected');
       document.getElementById('chk-none').textContent = '✓';
     }
   } else {
-    // min / std / prem — взаємовиключні; не чіпають RUN AND DRIVE
+    // min / std / prem — заблоковані поки активне "Без страхування"
+    if (selectedMainLevel === 'none') return;
     const prev = selectedMainLevel;
-    if (prev && prev !== 'none') {
+    if (prev) {
       document.getElementById('card-' + prev).classList.remove('selected');
       document.getElementById('chk-' + prev).textContent = '';
     }
     if (prev === level) {
-      selectedMainLevel = null; // повторний клік — знімаємо
+      selectedMainLevel = null;
     } else {
       selectedMainLevel = level;
       document.getElementById('card-' + level).classList.add('selected');
