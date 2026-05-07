@@ -793,6 +793,23 @@ function submitForm() {
   `;
   document.getElementById('summaryCard').innerHTML = summaryHTML;
 
+  // Відправка в Google Sheets
+  const SHEET_URL = 'https://script.google.com/macros/s/AKfycbyCfwltCOjVW97_flqfXr6n-wkBYY-s_uN8HCUFQrjj6yXtXUNFqZfu7fIxu-0uhFGoOA/exec';
+  fetch(SHEET_URL, {
+    method: 'POST',
+    mode: 'no-cors',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      date: date,
+      vin: vin,
+      name: name,
+      phone: phone,
+      car: make + ' ' + model,
+      level: levelDisplay,
+      sigImg: sigImg ? true : false
+    })
+  }).catch(() => {});
+
   document.getElementById('formBody').style.display = 'none';
   document.getElementById('successOverlay').style.display = 'block';
   document.getElementById('successOverlay').scrollIntoView({ behavior: 'smooth', block: 'start' });
