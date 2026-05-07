@@ -608,7 +608,7 @@ function selectLevel(level) {
     }
   } else {
     // min / std / prem — заблоковані поки активне "Без страхування"
-    if (selectedMainLevel === 'none') return;
+    if (selectedMainLevel === 'none') { showToast('Щоб обрати страхування — спочатку зніміть «Без страхування»'); return; }
     const prev = selectedMainLevel;
     if (prev) {
       document.getElementById('card-' + prev).classList.remove('selected');
