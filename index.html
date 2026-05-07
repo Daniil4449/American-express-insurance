@@ -1012,22 +1012,24 @@ body{font-family:Arial,sans-serif;font-size:13px;color:#1c2b3a;padding:20px;back
 }
 
 function resetForm() {
-  selectedLevel = null; rndSelected = false; consentChecked = false; sigHasData = false;
-  ['min','std','prem','rnd','none'].forEach(l => {
-    document.getElementById('card-' + l).classList.remove('selected');
-    document.getElementById('chk-' + l).textContent = '';
-  });
-  document.getElementById('consentBox').classList.remove('checked');
-  document.getElementById('consentBox').textContent = '';
-  clearSig();
-  ['clientName','clientPhone','carMake','carModel','carVin'].forEach(id => {
-    document.getElementById(id).value = '';
-    document.getElementById(id).classList.remove('error');
-  });
-  document.getElementById('clientDate').value = today.toISOString().split('T')[0];
   document.getElementById('formBody').style.display = 'block';
   document.getElementById('successOverlay').style.display = 'none';
-  window._formData = null;
+
+  // Відновлюємо підпис з збережених даних
+  if (window._formData && window._formData.sigImg && window._formData.sigImg.length > 100) {
+    const img = new Image();
+    img.onload = function() {
+      const ratio = window.devicePixelRatio || 1;
+      ctx.clearRect(0, 0, canvas.width / ratio, canvas.height / ratio);
+      ctx.drawImage(img, 0, 0, canvas.width / ratio, canvas.height / ratio);
+    };
+    img.src = window._formData.sigImg;
+    sigHasData = true;
+    document.getElementById('sigPlaceholder').style.opacity = '0';
+    document.getElementById('sigClear').style.display = 'block';
+  }
+
+  document.getElementById('formSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function showToast(msg) {
