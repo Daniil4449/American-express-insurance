@@ -582,28 +582,68 @@
 </div>
 
 <script>
-let selectedLevel = null;
-let rndSelected = false;
+let selectedMainLevel = null; // min | std | prem | none
+let rndSelected = false;      // RUN AND DRIVE — незалежний від інших
 let consentChecked = false;
 let sigHasData = false;
 
 function selectLevel(level) {
-  if (selectedLevel === level) {
-    document.getElementById('card-' + level).classList.remove('selected');
-    document.getElementById('chk-' + level).textContent = '';
-    selectedLevel = null;
-    if (level === 'rnd') rndSelected = false;
-    return;
+  if (level === 'rnd') {
+    // RUN AND DRIVE — незалежний перемикач
+    rndSelected = !rndSelected;
+    document.getElementById('card-rnd').classList.toggle('selected', rndSelected);
+    document.getElementById('chk-rnd').textContent = rndSelected ? '✓' : '';
+    // Якщо було обрано "Без страхування" — знімаємо його
+    if (rndSelected && selectedMainLevel === 'none') {
+      selectedMainLevel = null;
+      document.getElementById('card-none').classList.remove('selected');
+      document.getElementById('chk-none').textContent = '';
+    }
+  } else if (level === 'none') {
+    // "Без страхування" — знімає ВСЕ, включно з RUN AND DRIVE
+    const wasNone = selectedMainLevel === 'none';
+    ['min', 'std', 'prem', 'rnd', 'none'].forEach(l => {
+      document.getElementById('card-' + l).classList.remove('selected');
+      document.getElementById('chk-' + l).textContent = '';
+    });
+    selectedMainLevel = null;
+    rndSelected = false;
+    if (!wasNone) {
+      selectedMainLevel = 'none';
+      document.getElementById('card-none').classList.add('selected');
+      document.getElementById('chk-none').textContent = '✓';
+    }
+  } else {
+    // min / std / prem — взаємовиключні; не чіпають RUN AND DRIVE
+    const prev = selectedMainLevel;
+    if (prev && prev !== 'none') {
+      document.getElementById('card-' + prev).classList.remove('selected');
+      document.getElementById('chk-' + prev).textContent = '';
+    }
+    if (prev === level) {
+      selectedMainLevel = null; // повторний клік — знімаємо
+    } else {
+      selectedMainLevel = level;
+      document.getElementById('card-' + level).classList.add('selected');
+      document.getElementById('chk-' + level).textContent = '✓';
+    }
   }
-  ['min', 'std', 'prem', 'rnd', 'none'].forEach(l => {
-    document.getElementById('card-' + l).classList.remove('selected');
-    document.getElementById('chk-' + l).textContent = '';
-  });
-  selectedLevel = level;
-  rndSelected = (level === 'rnd');
-  document.getElementById('card-' + level).classList.add('selected');
-  document.getElementById('chk-' + level).textContent = '✓';
   document.getElementById('level-error').style.display = 'none';
+}
+
+function getLevelColorKey() {
+  if (selectedMainLevel && selectedMainLevel !== 'none') return selectedMainLevel;
+  if (selectedMainLevel === 'none') return 'none';
+  return 'rnd';
+}
+
+function getLevelDisplay() {
+  const names = { min: 'Мінімум (2%)', std: 'Стандарт (4%)', prem: 'Преміум (7%)', none: 'Без страхування (відмова клієнта)' };
+  if (selectedMainLevel === 'none') return names.none;
+  const parts = [];
+  if (selectedMainLevel) parts.push(names[selectedMainLevel]);
+  if (rndSelected) parts.push('RUN AND DRIVE (10%)');
+  return parts.join(' + ');
 }
 
 function toggleConsent() {
@@ -685,11 +725,11 @@ document.getElementById('clientDate').value = today.toISOString().split('T')[0];
 function submitForm() {
   let valid = true;
 
-  if (!selectedLevel) {
+  const hasLevel = selectedMainLevel !== null || rndSelected;
+  if (!hasLevel) {
     document.getElementById('level-error').style.display = 'block';
     valid = false;
-    showToast('Оберіть рівень страхування або «Без страхування»');
-    document.querySelectorAll('.level-card:not(.rnd)').forEach(c => {
+    document.querySelectorAll('.level-card').forEach(c => {
       c.style.border = '2px solid var(--red)';
       c.style.background = '#fff5f5';
       setTimeout(() => { c.style.border = ''; c.style.background = ''; }, 2000);
@@ -703,7 +743,6 @@ function submitForm() {
     document.getElementById('consent-error').style.display = 'block';
     valid = false;
     shakeConsent();
-    showToast('⚠️ Необхідно підтвердити ознайомлення з умовами!');
   }
 
   const name = document.getElementById('clientName').value.trim();
@@ -715,18 +754,25 @@ function submitForm() {
   else document.getElementById('carVin').classList.remove('error');
 
   if (!valid) {
+    // Toast показує тільки найпершу помилку
+    if (!hasLevel) showToast('Оберіть рівень страхування або «Без страхування»');
+    else if (!sigHasData) showToast('Будь ласка, поставте підпис');
+    else if (!consentChecked) showToast('⚠️ Підтвердьте ознайомлення з умовами страхування!');
+    else showToast('Заповніть всі обов\'язкові поля');
     document.getElementById('formSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
     return;
   }
 
   const levelNames = { min: 'Мінімум (2%)', std: 'Стандарт (4%)', prem: 'Преміум (7%)', rnd: 'RUN AND DRIVE (10%)', none: 'Без страхування (відмова клієнта)' };
+  const levelDisplay = getLevelDisplay();
+  const levelColorKey = getLevelColorKey();
   const date = document.getElementById('clientDate').value;
   const phone = document.getElementById('clientPhone').value.trim();
   const make = document.getElementById('carMake').value.trim();
   const model = document.getElementById('carModel').value.trim();
   const sigImg = canvas.toDataURL('image/png');
 
-  window._formData = { name, phone, make, model, vin, date, sigImg, level: selectedLevel, rnd: rndSelected, levelNames };
+  window._formData = { name, phone, make, model, vin, date, sigImg, level: levelColorKey, levelDisplay, levelNames };
 
   const summaryHTML = `
     <div class="s-row"><span class="s-label">Клієнт</span><span class="s-val">${name}</span></div>
@@ -735,7 +781,7 @@ function submitForm() {
     <div class="s-row"><span class="s-label">Автомобіль</span><span class="s-val">${make} ${model}</span></div>
     <div class="s-row"><span class="s-label">VIN / Замовлення</span><span class="s-val" style="font-family:monospace;letter-spacing:1px">${vin}</span></div>
     <hr>
-    <div class="s-row"><span class="s-label">Рівень страхування</span><span class="s-val">${levelNames[selectedLevel]}</span></div>
+    <div class="s-row"><span class="s-label">Рівень страхування</span><span class="s-val">${levelDisplay}</span></div>
     <div class="s-row"><span class="s-label">Дата підписання</span><span class="s-val">${date}</span></div>
   `;
   document.getElementById('summaryCard').innerHTML = summaryHTML;
@@ -780,7 +826,7 @@ body{font-family:Arial,sans-serif;font-size:13px;color:#1c2b3a;padding:20px;back
   <div class="row"><span class="lbl">Марка та модель</span><span class="val">${d.make} ${d.model}</span></div>
   <div class="row"><span class="lbl">VIN-код / Номер замовлення</span><span class="val" style="font-family:monospace;letter-spacing:1px">${d.vin}</span></div>
   <div class="st">Обраний рівень страхування</div>
-  <div class="lvl">${levelNames[d.level]}</div>
+  <div class="lvl">${d.levelDisplay || d.levelNames[d.level]}</div>
   ${d.level === 'none' ? '<p style="background:#fdecea;border-left:4px solid #c0392b;padding:10px;border-radius:4px;font-size:12px;margin-top:8px;">⚠️ Клієнт відмовився від страхування та ознайомлений з ризиками.</p>' : ''}
   <div class="st">Підпис клієнта</div>
   <div class="sig"><img src="${d.sigImg}" alt="Підпис"></div>
