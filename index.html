@@ -198,6 +198,7 @@
   @media (min-width: 1200px) { .wrapper { padding: 0 48px; } .sidebar { width: 250px; } }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
 <body>
 
@@ -744,205 +745,15 @@ function submitForm() {
   document.getElementById('successOverlay').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-async function downloadPDF() {
-  const btn = document.getElementById('btnPdf');
-  btn.innerHTML = '<span>⏳</span><span>Генерую PDF…</span>';
-  btn.disabled = true;
-
-  try {
-    if (typeof window.jspdf === 'undefined') {
-      await new Promise((resolve, reject) => {
-        const script = document.createElement('script');
-        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
-        script.onload = resolve;
-        script.onerror = reject;
-        document.head.appendChild(script);
-        setTimeout(reject, 10000);
-      });
-    }
-
-    const { jsPDF } = window.jspdf;
-    const d = window._formData;
-    if (!d) { btn.innerHTML = '<span>⬇️</span><span>Завантажити PDF</span>'; btn.disabled = false; return; }
-
-    const levelNames = d.levelNames;
-    const dateFormatted = d.date ? new Date(d.date).toLocaleDateString('uk-UA', { day:'2-digit', month:'long', year:'numeric' }) : '---';
-
-    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-    const W = 210;
-    const margin = 18;
-    const contentW = W - margin * 2;
-    let y = 0;
-
-    pdf.setFillColor(26, 47, 78);
-    pdf.rect(0, 0, W, 38, 'F');
-    pdf.setTextColor(255, 255, 255);
-    pdf.setFontSize(22);
-    pdf.setFont('helvetica', 'bold');
-    pdf.text('AMERICAN EXPRESS', W / 2, 16, { align: 'center' });
-    pdf.setFontSize(10);
-    pdf.setFont('helvetica', 'normal');
-    pdf.text('Strakhuvannia transportnykh zasobiv - Pidpysanyi dohovir', W / 2, 25, { align: 'center' });
-    pdf.setFontSize(9);
-    pdf.setTextColor(200, 210, 220);
-    pdf.text('American Express Insurance Document', W / 2, 32, { align: 'center' });
-
-    y = 46;
-    pdf.setTextColor(28, 43, 58);
-
-    function sectionTitle(text) {
-      pdf.setFillColor(214, 228, 240);
-      pdf.rect(margin, y, contentW, 7, 'F');
-      pdf.setFontSize(10);
-      pdf.setFont('helvetica', 'bold');
-      pdf.setTextColor(31, 78, 121);
-      pdf.text(text, margin + 2, y + 5);
-      pdf.setTextColor(28, 43, 58);
-      y += 11;
-    }
-
-    function row(label, value, bold = false) {
-      pdf.setFontSize(10);
-      pdf.setFont('helvetica', 'normal');
-      pdf.setTextColor(107, 122, 141);
-      pdf.text(label, margin, y);
-      pdf.setFont('helvetica', bold ? 'bold' : 'normal');
-      pdf.setTextColor(28, 43, 58);
-      pdf.text(value || '---', margin + 60, y);
-      y += 6.5;
-    }
-
-    function divider() {
-      pdf.setDrawColor(208, 218, 230);
-      pdf.line(margin, y, W - margin, y);
-      y += 4;
-    }
-
-    sectionTitle('DANI KLIENTA / CLIENT DATA');
-    row('PIB / Full Name:', d.name);
-    if (d.phone) row('Telefon / Phone:', d.phone);
-    row('Data / Date:', dateFormatted);
-    divider();
-
-    sectionTitle('DANI AVTOMOBILIA / VEHICLE DATA');
-    row('Marka ta Model / Make & Model:', (d.make + ' ' + d.model).trim() || '---');
-    row('VIN-kod / Order Number:', d.vin, true);
-    divider();
-
-    sectionTitle('OBRANY RIVEN STRAKHUVANNIA / INSURANCE LEVEL');
-    y += 2;
-
-    const lvlColors = { min: [234, 244, 251], std: [232, 245, 238], prem: [240, 234, 251], rnd: [245, 233, 208], none: [253, 236, 234] };
-    const lvlBorderColors = { min: [46, 117, 182], std: [30, 107, 60], prem: [124, 58, 237], rnd: [184, 147, 74], none: [192, 57, 43] };
-    const bc = lvlBorderColors[d.level] || [100, 100, 100];
-    const bg = lvlColors[d.level] || [244, 245, 247];
-
-    pdf.setFillColor(...bg);
-    pdf.setDrawColor(...bc);
-    pdf.setLineWidth(0.8);
-    pdf.roundedRect(margin, y, contentW, 14, 3, 3, 'FD');
-    pdf.setFontSize(13);
-    pdf.setFont('helvetica', 'bold');
-    pdf.setTextColor(...bc);
-    pdf.text(levelNames[d.level], W / 2, y + 9.5, { align: 'center' });
-    y += 18;
-
-    if (d.level === 'none') {
-      y += 2;
-      pdf.setFillColor(253, 236, 234);
-      pdf.setDrawColor(192, 57, 43);
-      pdf.setLineWidth(0.5);
-      pdf.rect(margin, y, contentW, 10, 'FD');
-      pdf.setFontSize(9);
-      pdf.setFont('helvetica', 'normal');
-      pdf.setTextColor(192, 57, 43);
-      pdf.text('! Klient vidmovivsya vid strakhuvannia ta oznayomlenyi z ryzykamy.', margin + 3, y + 6.5);
-      y += 14;
-    }
-
-    divider();
-
-    sectionTitle('PIDPYS KLIENTA / CLIENT SIGNATURE');
-    y += 2;
-
-    if (d.sigImg && d.sigImg.length > 100) {
-      try {
-        pdf.addImage(d.sigImg, 'PNG', margin, y, 90, 28, undefined, 'FAST');
-      } catch(e) {
-        pdf.setFontSize(9); pdf.setTextColor(150,150,150);
-        pdf.text('[Pidpys / Signature]', margin, y + 14);
-      }
-    }
-    y += 32;
-
-    pdf.setFillColor(255, 251, 230);
-    pdf.setDrawColor(230, 184, 0);
-    pdf.setLineWidth(0.5);
-    pdf.rect(margin, y, contentW, 14, 'FD');
-    pdf.setFillColor(184, 147, 74);
-    pdf.rect(margin + 2, y + 3, 6, 6, 'F');
-    pdf.setFontSize(8.5);
-    pdf.setFont('helvetica', 'bold');
-    pdf.setTextColor(184, 147, 74);
-    pdf.text('v', margin + 3.5, y + 7.5);
-    pdf.setFont('helvetica', 'normal');
-    pdf.setTextColor(28, 43, 58);
-    pdf.text('Klient pidtverdzhue oznayomlennia z usima umovamy strakhuvannia ta pererakom vykhliuchen.', margin + 12, y + 6, { maxWidth: contentW - 14 });
-    y += 18;
-
-    divider();
-
-    pdf.setFontSize(9);
-    pdf.setFont('helvetica', 'normal');
-    pdf.setTextColor(107, 122, 141);
-    pdf.text('Predstavnyk American Express: _________________________', margin, y);
-    pdf.text('Pidpys: _______________', W - margin - 60, y);
-    y += 10;
-
-    pdf.setFillColor(26, 47, 78);
-    pdf.rect(0, 285, W, 12, 'F');
-    pdf.setFontSize(8);
-    pdf.setFont('helvetica', 'normal');
-    pdf.setTextColor(160, 180, 200);
-    pdf.text('American Express — Strakhuvannia TZ  |  Dokument sformovano: ' + new Date().toLocaleDateString('uk-UA'), W / 2, 292.5, { align: 'center' });
-
-    const safeName = (d.name.replace(/\s+/g, '_') || 'klient');
-    const fileName = 'Strakhuvannia_' + safeName + '_' + (d.vin || 'novin') + '.pdf';
-
-    const pdfBlob = pdf.output('blob');
-    const blobUrl = URL.createObjectURL(pdfBlob);
-    const link = document.createElement('a');
-    link.href = blobUrl;
-    link.download = fileName;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    setTimeout(() => URL.revokeObjectURL(blobUrl), 5000);
-
-    btn.innerHTML = '<span>✅</span><span>PDF завантажено!</span>';
-    setTimeout(() => { btn.innerHTML = '<span>⬇️</span><span>Завантажити PDF</span>'; }, 2500);
-    btn.disabled = false;
-
-  } catch(err) {
-    btn.innerHTML = '<span>⬇️</span><span>Завантажити PDF</span>';
-    btn.disabled = false;
-    alert('Помилка генерації PDF: ' + err.message);
-  }
-}
-
-function printDoc() {
-  const d = window._formData;
-  if (!d) { window.print(); return; }
-
+function buildPrintHTML(d) {
   const levelNames = d.levelNames;
   const lvlColors = { min: '#eaf4fb', std: '#e8f5ee', prem: '#f0eafb', rnd: '#f5e9d0', none: '#fdecea' };
   const lvlBorder = { min: '#2E75B6', std: '#1e6b3c', prem: '#7c3aed', rnd: '#b8934a', none: '#c0392b' };
   const dateFormatted = d.date ? new Date(d.date).toLocaleDateString('uk-UA', { day:'2-digit', month:'long', year:'numeric' }) : '---';
-
-  const printHtml = `<!DOCTYPE html><html lang="uk"><head><meta charset="UTF-8"><title>Страхування — ${d.name}</title>
+  return `<!DOCTYPE html><html lang="uk"><head><meta charset="UTF-8">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:Arial,sans-serif;font-size:13px;color:#1c2b3a;padding:20px;background:white}
+body{font-family:Arial,sans-serif;font-size:13px;color:#1c2b3a;padding:20px;background:white;width:794px}
 .hdr{background:#1a2f4e;color:white;padding:24px;text-align:center;border-radius:8px 8px 0 0}
 .hdr h1{font-size:22px;letter-spacing:2px;margin-bottom:4px}
 .hdr p{font-size:11px;opacity:0.75}
@@ -984,10 +795,84 @@ body{font-family:Arial,sans-serif;font-size:13px;color:#1c2b3a;padding:20px;back
 </div>
 <div class="footer">American Express — Страхування ТЗ &nbsp;|&nbsp; Документ сформовано: ${new Date().toLocaleDateString('uk-UA')}</div>
 </body></html>`;
+}
 
-  const blob = new Blob([printHtml], { type: 'text/html;charset=utf-8' });
-  const blobUrl = URL.createObjectURL(blob);
+function loadScript(src) {
+  return new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = src; s.onload = resolve; s.onerror = reject;
+    document.head.appendChild(s);
+    setTimeout(reject, 15000);
+  });
+}
 
+async function downloadPDF() {
+  const btn = document.getElementById('btnPdf');
+  btn.innerHTML = '<span>⏳</span><span>Генерую PDF…</span>';
+  btn.disabled = true;
+
+  const d = window._formData;
+  if (!d) { btn.innerHTML = '<span>⬇️</span><span>Завантажити PDF</span>'; btn.disabled = false; return; }
+
+  try {
+    if (typeof html2canvas === 'undefined') await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
+    if (typeof window.jspdf === 'undefined') await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+
+    const container = document.createElement('div');
+    container.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:794px;background:white;';
+    container.innerHTML = buildPrintHTML(d);
+    document.body.appendChild(container);
+    await new Promise(r => setTimeout(r, 500));
+
+    const cvs = await html2canvas(container, { scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false });
+    document.body.removeChild(container);
+
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const pdfW = 210, pageH = 297;
+    const ratio = pdfW / cvs.width;
+    const pdfH = cvs.height * ratio;
+
+    if (pdfH <= pageH) {
+      pdf.addImage(cvs.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, pdfW, pdfH);
+    } else {
+      let yPos = 0;
+      while (yPos < cvs.height) {
+        const sliceH = Math.min(pageH / ratio, cvs.height - yPos);
+        const tmp = document.createElement('canvas');
+        tmp.width = cvs.width; tmp.height = sliceH;
+        tmp.getContext('2d').drawImage(cvs, 0, yPos, cvs.width, sliceH, 0, 0, cvs.width, sliceH);
+        if (yPos > 0) pdf.addPage();
+        pdf.addImage(tmp.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, pdfW, sliceH * ratio);
+        yPos += sliceH;
+      }
+    }
+
+    const safeName = (d.name.replace(/\s+/g, '_') || 'klient');
+    const fileName = 'Strakhuvannia_' + safeName + '_' + (d.vin || 'novin') + '.pdf';
+    const blobUrl = URL.createObjectURL(pdf.output('blob'));
+    const link = document.createElement('a');
+    link.href = blobUrl; link.download = fileName;
+    document.body.appendChild(link); link.click(); document.body.removeChild(link);
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 5000);
+
+    btn.innerHTML = '<span>✅</span><span>PDF завантажено!</span>';
+    setTimeout(() => { btn.innerHTML = '<span>⬇️</span><span>Завантажити PDF</span>'; }, 2500);
+    btn.disabled = false;
+
+  } catch(err) {
+    btn.innerHTML = '<span>⬇️</span><span>Завантажити PDF</span>';
+    btn.disabled = false;
+    alert('Помилка генерації PDF: ' + err.message);
+  }
+}
+
+
+function printDoc() {
+  const d = window._formData;
+  if (!d) { window.print(); return; }
+
+  const blobUrl = URL.createObjectURL(new Blob([buildPrintHTML(d)], { type: 'text/html;charset=utf-8' }));
   const oldFrame = document.getElementById('printFrame');
   if (oldFrame) oldFrame.remove();
 
@@ -996,18 +881,10 @@ body{font-family:Arial,sans-serif;font-size:13px;color:#1c2b3a;padding:20px;back
   iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:800px;height:600px;border:none;';
   iframe.src = blobUrl;
   document.body.appendChild(iframe);
-
   iframe.onload = function() {
-    try {
-      iframe.contentWindow.focus();
-      iframe.contentWindow.print();
-    } catch(e) {
-      window.open(blobUrl, '_blank');
-    }
-    setTimeout(() => {
-      URL.revokeObjectURL(blobUrl);
-      iframe.remove();
-    }, 3000);
+    try { iframe.contentWindow.focus(); iframe.contentWindow.print(); }
+    catch(e) { window.open(blobUrl, '_blank'); }
+    setTimeout(() => { URL.revokeObjectURL(blobUrl); iframe.remove(); }, 3000);
   };
 }
 
