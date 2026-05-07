@@ -754,12 +754,19 @@ function submitForm() {
   else document.getElementById('carVin').classList.remove('error');
 
   if (!valid) {
-    // Toast показує тільки найпершу помилку
-    if (!hasLevel) showToast('Оберіть рівень страхування або «Без страхування»');
-    else if (!sigHasData) showToast('Будь ласка, поставте підпис');
-    else if (!consentChecked) showToast('⚠️ Підтвердьте ознайомлення з умовами страхування!');
-    else showToast('Заповніть всі обов\'язкові поля');
-    document.getElementById('formSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (!hasLevel) {
+      showToast('Оберіть рівень страхування або «Без страхування»');
+      document.getElementById('formSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else if (!sigHasData) {
+      showToast('Будь ласка, поставте підпис');
+      document.getElementById('sigWrap').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    } else if (!consentChecked) {
+      showToast('⚠️ Підтвердьте ознайомлення з умовами страхування!');
+      document.querySelector('.consent-box').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    } else {
+      showToast('Заповніть всі обов\'язкові поля');
+      document.getElementById('formSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
     return;
   }
 
