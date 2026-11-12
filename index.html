@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, ">
-<title>American Express — Страхування ТЗ</title>
+<title>American Express — Insurance</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Source+Sans+3:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -105,6 +105,15 @@
   .level-card.selected.prem .checkmark { background: #7c3aed; border-color: #7c3aed; }
   .level-card.selected.rnd .checkmark { background: var(--gold); border-color: var(--gold); }
   .rnd-hint { display: none; }
+  .moisture-card { display: flex; align-items: center; gap: 14px; border: 2px solid #90c5e8; border-radius: 10px; padding: 14px 16px; cursor: pointer; transition: all 0.2s; user-select: none; -webkit-tap-highlight-color: transparent; background: #f9f9f9; margin-bottom: 8px; }
+  .moisture-card.selected { background: #eaf4fb; border-color: var(--mid); }
+  .moisture-check { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 12px; flex-shrink: 0; transition: all 0.2s; }
+  .moisture-card.selected .moisture-check { background: var(--mid); border-color: var(--mid); color: white; }
+  .moisture-icon { font-size: 26px; flex-shrink: 0; }
+  .moisture-info { flex: 1; }
+  .moisture-name { font-weight: 700; font-size: 15px; color: var(--navy); }
+  .moisture-desc { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .moisture-price { font-weight: 700; font-size: 16px; color: var(--mid); flex-shrink: 0; }
   .field-group { margin-bottom: 16px; }
   .field-label { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 6px; display: block; }
   .field-input { width: 100%; padding: 11px 14px; border: 1.5px solid var(--border); border-radius: 8px; font-family: 'Source Sans 3', sans-serif; font-size: 15px; color: var(--text); background: var(--gray); transition: border-color 0.2s, background 0.2s; -webkit-appearance: none; appearance: none; }
@@ -220,6 +229,7 @@
     <a href="#sec6">6. Виключення</a>
     <a href="#sec7">7. Подача заявки</a>
     <a href="#sec8">8. Отримання авто</a>
+    <a href="#sec9">9. Вологопоглиначі</a>
     <a href="#formSection">✍️ Підписати</a>
   </div>
 </nav>
@@ -447,6 +457,20 @@
   </div>
 </div>
 
+<!-- SECTION 9 -->
+<div class="section" id="sec9">
+  <div class="section-title">9. Вологопоглиначі</div>
+  <div class="section-body">
+    <p><span class="num">9.1.</span> Під час морського перевезення автомобіль зазнає впливу підвищеної вологості та перепадів температур. Надлишкова вологість може призвести до появи корозії на металевих елементах, пошкодження електроніки, виникнення неприємного запаху та плісняви в салоні.</p>
+    <p><span class="num">9.2.</span> Вологопоглиначі розміщуються в салоні та багажному відділенні автомобіля на етапі завантаження в контейнер і активно поглинають надлишкову вологу протягом усього маршруту доставки.</p>
+    <p><span class="num">9.3.</span> Послуга є необов'язковою — Клієнт може відмовитись, знявши відповідну позначку у формі підписання.</p>
+    <div class="alert alert-info" style="margin-top:10px;">
+      <strong>💧 Вартість послуги: $40</strong>
+      Оплачується разом із логістикою після прибуття автомобіля в порт призначення.
+    </div>
+  </div>
+</div>
+
 <!-- FORM SECTION -->
 <div class="form-section" id="formSection">
   <div class="section-title">Підтвердження ознайомлення та вибір рівня страхування</div>
@@ -491,6 +515,19 @@
       </div>
     </div>
     <div id="level-error" style="color:var(--red);font-size:13px;display:none;margin-bottom:10px;">⚠️ Будь ласка, оберіть рівень страхування</div>
+
+    <div class="divider" style="margin:16px 0 12px"></div>
+
+    <div class="level-label">Додаткові послуги</div>
+    <div class="moisture-card selected" id="moistureCard" onclick="toggleMoisture()">
+      <div class="moisture-check" id="moistureCheck">✓</div>
+      <div class="moisture-icon">💧</div>
+      <div class="moisture-info">
+        <div class="moisture-name">Вологопоглиначі</div>
+        <div class="moisture-desc">Захист від надлишкової вологи під час морського перевезення</div>
+      </div>
+      <div class="moisture-price">$40</div>
+    </div>
 
     <div class="divider"></div>
 
@@ -584,6 +621,13 @@ let selectedMainLevel = null; // min | std | prem | none
 let rndSelected = false;      // RUN AND DRIVE — незалежний від інших
 let consentChecked = false;
 let sigHasData = false;
+let moistureSelected = true;  // вологопоглиначі — увімкнено за замовчуванням
+
+function toggleMoisture() {
+  moistureSelected = !moistureSelected;
+  document.getElementById('moistureCard').classList.toggle('selected', moistureSelected);
+  document.getElementById('moistureCheck').textContent = moistureSelected ? '✓' : '';
+}
 
 function selectLevel(level) {
   if (level === 'rnd') {
@@ -771,7 +815,7 @@ function submitForm() {
   const model = document.getElementById('carModel').value.trim();
   const sigImg = canvas.toDataURL('image/png');
 
-  window._formData = { name, phone, make, model, vin, date, sigImg, level: levelColorKey, levelDisplay, levelNames };
+  window._formData = { name, phone, make, model, vin, date, sigImg, level: levelColorKey, levelDisplay, levelNames, moisture: moistureSelected };
 
   const summaryHTML = `
     <div class="s-row"><span class="s-label">Клієнт</span><span class="s-val">${name}</span></div>
@@ -781,6 +825,7 @@ function submitForm() {
     <div class="s-row"><span class="s-label">VIN / Замовлення</span><span class="s-val" style="font-family:monospace;letter-spacing:1px">${vin}</span></div>
     <hr>
     <div class="s-row"><span class="s-label">Рівень страхування</span><span class="s-val">${levelDisplay}</span></div>
+    <div class="s-row"><span class="s-label">Вологопоглиначі</span><span class="s-val">${moistureSelected ? 'Так ($40)' : 'Ні'}</span></div>
     <div class="s-row"><span class="s-label">Дата підписання</span><span class="s-val">${date}</span></div>
   `;
   document.getElementById('summaryCard').innerHTML = summaryHTML;
@@ -798,6 +843,7 @@ function submitForm() {
       phone: phone,
       car: make + ' ' + model,
       level: levelDisplay,
+      moisture: moistureSelected ? 'Так ($40)' : 'Ні',
       sigImg: sigImg ? true : false
     })
   }).catch(() => {});
@@ -844,6 +890,8 @@ body{font-family:Arial,sans-serif;font-size:13px;color:#1c2b3a;padding:20px;back
   <div class="st">Обраний рівень страхування</div>
   <div class="lvl">${d.levelDisplay || d.levelNames[d.level]}</div>
   ${d.level === 'none' ? '<p style="background:#fdecea;border-left:4px solid #c0392b;padding:10px;border-radius:4px;font-size:12px;margin-top:8px;">⚠️ Клієнт відмовився від страхування та ознайомлений з ризиками.</p>' : ''}
+  <div class="st">Додаткові послуги</div>
+  <div class="row"><span class="lbl">💧 Вологопоглиначі</span><span class="val">${d.moisture ? 'Так ($40)' : 'Ні'}</span></div>
   <div class="st">Підпис клієнта</div>
   <div class="sig"><img src="${d.sigImg}" alt="Підпис"></div>
   <div class="consent">
